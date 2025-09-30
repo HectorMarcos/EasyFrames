@@ -39,6 +39,12 @@ local OnSetPointHookScript = function(point, relativeTo, relativePoint, xOffset,
     end
 end
 
+local function SafeSetTexture(texObj, path)
+    if texObj and texObj.SetTexture and path then
+        pcall(texObj.SetTexture, texObj, path)
+    end
+end
+
 function Core:OnInitialize()
     self.db = EasyFrames.db
     db = self.db.profile
@@ -61,6 +67,19 @@ function Core:OnEnable()
     self:MovePetFrameBars()
     self:MovePartyFrameBars()
     self:MoveBossFrameBars()
+
+    self:ApplyAllTexturesHard()
+
+    self:RegisterEvent("PLAYER_ENTERING_WORLD", "ApplyAllTexturesHard")
+    self:RegisterEvent("PLAYER_LOGIN", "ApplyAllTexturesHard")
+
+    self:SecureHook("PlayerFrame_ToPlayerArt", "ApplyAllTexturesHard")
+    self:SecureHook("PlayerFrame_ToVehicleArt", "ApplyAllTexturesHard")
+    self:SecureHook("PlayerFrame_UpdateArt", "ApplyAllTexturesHard")
+
+    C_Timer.After(0, function() Core:ApplyAllTexturesHard() end)
+    C_Timer.After(0.2, function() Core:ApplyAllTexturesHard() end)
+
 
     --self:MovePlayerFramesBarsTextString()
     --self:MoveTargetFramesBarsTextString()
@@ -174,7 +193,7 @@ function Core:MovePlayerFrameBars()
     PlayerFrameHealthBar:SetHeight(27)
     PlayerStatusTexture:SetHeight(69)
 
-    self:MoveRegion(PlayerFrameHealthBar, "CENTER", PlayerFrame, "CENTER", 50, 14)
+    self:MoveRegion(PlayerFrameHealthBar, "CENTER", PlayerFrame, "CENTER", 48, 14)
     self:MoveRegion(PlayerFrameManaBar, "CENTER", PlayerFrame, "CENTER", 51, -7)
     self:MoveRegion(PlayerFrameAlternateManaBarText, "CENTER", PlayerFrameAlternateManaBar, "CENTER", 0, -1)
 
@@ -286,3 +305,47 @@ function Core:MoveLevelText()
     Core:MoveRegion(TargetFrame.levelText, "CENTER", 63, -17)
     Core:MoveRegion(FocusFrame.levelText, "CENTER", 63, -17)
 end
+
+function Core:ApplyAllTexturesHard()
+    -- 1) Statusbars
+    local sbTexture = Media:Fetch("statusbar", db.general.barTexture or "Blizzard")
+
+    for _, bar in pairs(EasyFrames.Utils.GetFramesHealthBar()) do
+        if bar and bar.SetStatusBarTexture then
+            pcall(bar.SetStatusBarTexture, bar, sbTexture)
+        end
+    end
+
+    for _, bar in pairs(EasyFrames.Utils.GetFramesManaBar()) do
+        if bar and bar.SetStatusBarTexture then
+            pcall(bar.SetStatusBarTexture, bar, sbTexture)
+        end
+    end
+
+    -- 2) Frame border / art
+    local frameTex
+
+    if db.general.lightTexture then
+        frameTex = "Interface\\AddOns\\EasyFrames\\Textures\\TargetingFrame\\UI-TargetingFrame-Light"
+    else
+        frameTex = Media:Fetch("frames", "default")
+    end
+
+    if _G["PlayerFrameTexture"] then
+        SafeSetTexture(_G["PlayerFrameTexture"], frameTex)
+    end
+    if _G["PlayerFrameTextureFrameTexture"] then
+        SafeSetTexture(_G["PlayerFrameTextureFrameTexture"], frameTex)
+    end
+
+    -- target/focus/boss/party/pet frames set
+    if self.CheckClassification then
+        pcall(self.CheckClassification, self, TargetFrame)
+        pcall(self.CheckClassification, self, FocusFrame)
+        for _, boss in pairs(EasyFrames.Utils.GetBossFrames()) do
+            pcall(self.CheckClassification, self, boss)
+        end
+    end
+end
+
+
