@@ -31,6 +31,23 @@ local DEFAULT_FRAMES_NAME_COLOR = { 1, 0.82, 0 }
 
 local DEFAULT_CUSTOM_FORMAT = "%CURRENT% / %MAX% (%PERCENT%%)"
 
+local CLASS_ICON_TCOORDS = {
+    WARRIOR     = {0, 0.25, 0, 0.25},
+    MAGE        = {0.25, 0.49609375, 0, 0.25},
+    ROGUE       = {0.49609375, 0.7421875, 0, 0.25},
+    DRUID       = {0.7421875, 1, 0, 0.25},
+    HUNTER      = {0, 0.25, 0.25, 0.5},
+    SHAMAN      = {0.25, 0.49609375, 0.25, 0.5},
+    PRIEST      = {0.49609375, 0.7421875, 0.25, 0.5},
+    WARLOCK     = {0.7421875, 1, 0.25, 0.5},
+    PALADIN     = {0, 0.25, 0.5, 0.75},
+    DEATHKNIGHT = {0.25, 0.49609375, 0.5, 0.75},
+    MONK        = {0.49609375, 0.7421875, 0.5, 0.75},
+    DEMONHUNTER = {0.7421875, 1, 0.5, 0.75},
+    EVOKER      = {0, 0.25, 0.75, 1},
+}
+
+
 for i=1,4 do _G["PartyMemberFrame"..i.."HealthBarText"]:SetPoint("CENTER", 15, 5);end
 for i=1,4 do _G["PartyMemberFrame"..i.."ManaBarText"]:SetPoint("CENTER", 15, -7);end
 
@@ -640,13 +657,16 @@ end
 
 function EasyFrames.Utils.ClassPortraits(frame)
     local _, unitClass = UnitClass(frame.unit)
-    if (unitClass and UnitIsPlayer(frame.unit)) then
+    if (unitClass and UnitIsPlayer(frame.unit) and CLASS_ICON_TCOORDS[unitClass]) then
         frame.portrait:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
         frame.portrait:SetTexCoord(unpack(CLASS_ICON_TCOORDS[unitClass]))
     else
-        frame.portrait:SetTexCoord(0, 1, 0, 1)
+        -- NPC o unidades sin coords: usar retrato normal
+        SetPortraitTexture(frame.portrait, frame.unit)
+        frame.portrait:SetTexCoord(0, 1, 0, 1) -- asegurar coords completos
     end
 end
+
 
 function EasyFrames.Utils.DefaultPortraits(frame)
     SetPortraitTexture(frame.portrait, frame.unit)
