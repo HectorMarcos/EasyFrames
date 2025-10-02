@@ -307,3 +307,6 @@ L["Boss names font size"] = true
 L["Boss names color"] = true
 L["Show names of boss frames inside the frame"] = true
 L["Show indicator of threat"] = true
+
+L["Preview"] = "Preview"
+L["Show all frames to manually reposition them."] = "Show all frames (player, party, boss, target, focus) to manually reposition them."

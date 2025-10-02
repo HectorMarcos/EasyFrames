@@ -47,6 +47,8 @@ local CLASS_ICON_TCOORDS = {
     EVOKER      = {0, 0.25, 0.75, 1},
 }
 
+EasyFrames.CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
+
 
 for i=1,4 do _G["PartyMemberFrame"..i.."HealthBarText"]:SetPoint("CENTER", 15, 5);end
 for i=1,4 do _G["PartyMemberFrame"..i.."ManaBarText"]:SetPoint("CENTER", 15, -7);end

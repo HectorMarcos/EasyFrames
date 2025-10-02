@@ -136,6 +136,24 @@ local generalOptions = {
                     name = L["Setting for unit frames"],
                 },
 
+                testMode = {
+                    type = "toggle",
+                    name = L["Preview"],
+                    desc = L["Show all frames to manually reposition them."],
+                    order = 99,
+                    get = function()
+                        return EasyFrames.testMode or false
+                    end,
+                    set = function(_, value)
+                        EasyFrames.testMode = value
+                        if value then
+                            EasyFrames:ShowTestFrames()
+                        else
+                            EasyFrames:HideTestFrames()
+                        end
+                    end,
+                },
+
                 classColored = {
                     type = "toggle",
                     order = 3,

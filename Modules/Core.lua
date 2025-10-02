@@ -90,6 +90,19 @@ function Core:OnEnable()
     if (db.general.showWelcomeMessage) then
         print("|cff0cbd0cEasy Frames|cffffffff " .. L["loaded. Options:"] .. " |cff0cbd0c/ef")
     end
+
+    if not EasyFrames._testPortraitHooked then
+        EasyFrames._testPortraitHooked = true
+        hooksecurefunc("UnitFramePortrait_Update", function(f)
+            if EasyFrames.testMode and f and f.portrait then
+                -- Solo aplicar retrato falso si el frame no tiene unidad real
+                if (not f.unit or not UnitExists(f.unit)) then
+                    EasyFrames:TestMode_SetPortrait(f)
+                end
+            end
+        end)
+    end
+
 end
 
 
@@ -348,4 +361,106 @@ function Core:ApplyAllTexturesHard()
     end
 end
 
+SLASH_EASYFRAMESTEST1 = "/eftest"
+SlashCmdList["EASYFRAMESTEST"] = function()
+    EasyFrames:ToggleTestMode()
+end
+
+function EasyFrames:TestMode_Toggle()
+    self.testMode = not self.testMode
+
+    if self.testMode then
+        for _, frame in pairs(EasyFrames.Utils.GetAllFrames()) do
+            if frame.unit and string.match(frame.unit, "^party%d$") then
+                if UnitExists(frame.unit) then
+                    frame:Show()
+                else
+                    frame:Show()
+                    self:TestMode_SetPortrait(frame)
+                end
+            else
+                frame:Show()
+            end
+            frame:SetAlpha(1)
+        end
+    else
+        for _, frame in pairs(EasyFrames.Utils.GetAllFrames()) do
+            frame:SetAlpha(1)
+            if not UnitExists(frame.unit) then
+                frame:Hide()
+            end
+        end
+    end
+end
+
+
+function EasyFrames:ShowTestFrames()
+    local frames = EasyFrames.Utils.GetAllFrames()
+    for _, frame in ipairs(frames) do
+        if frame then
+            frame:Show()
+            -- hacer movible…
+            frame:SetMovable(true)
+            frame:EnableMouse(true)
+            frame:RegisterForDrag("LeftButton")
+            frame:SetScript("OnDragStart", frame.StartMoving)
+            frame:SetScript("OnDragStop", function(f)
+                f:StopMovingOrSizing()
+                local point, relativeTo, relativePoint, xOfs, yOfs = f:GetPoint()
+                self.db.profile.general.framesPoints = self.db.profile.general.framesPoints or {}
+                self.db.profile.general.framesPoints[f:GetName()] = {point, relativeTo and relativeTo:GetName() or nil, relativePoint, xOfs, yOfs}
+            end)
+
+            if (not frame.unit) or (frame.unit and not UnitExists(frame.unit)) then
+                EasyFrames:TestMode_SetPortrait(frame)
+            end
+        end
+    end
+end
+
+function EasyFrames:HideTestFrames()
+    local frames = EasyFrames.Utils.GetAllFrames()
+    for _, frame in ipairs(frames) do
+        if frame then
+            frame:SetMovable(false)
+            frame:EnableMouse(false)
+            frame:RegisterForDrag()
+            frame:SetScript("OnDragStart", nil)
+            frame:SetScript("OnDragStop", nil)
+
+            -- Volver a estado "normal": ocultar frames sin unidad real
+            if frame.unit and string.find(frame.unit, "^party%d$") and not UnitExists(frame.unit) then
+                frame:Hide()
+            elseif frame.unit and string.find(frame.unit, "^boss%d$") and not UnitExists(frame.unit) then
+                frame:Hide()
+            elseif frame == TargetFrame and not UnitExists("target") then
+                frame:Hide()
+            elseif frame == FocusFrame and not UnitExists("focus") then
+                frame:Hide()
+            else
+                -- Si el frame sigue visible y tiene unidad real, rehacer retrato normal
+                if frame.portrait and frame.unit and UnitExists(frame.unit) then
+                    UnitFramePortrait_Update(frame)
+                end
+            end
+        end
+    end
+end
+
+function EasyFrames:TestMode_SetPortrait(frame)
+    if not frame or not frame.portrait then return end
+
+    local _, playerClass = UnitClass("player")
+    local coordsTable = EasyFrames.CLASS_ICON_TCOORDS
+    local coords = coordsTable and playerClass and coordsTable[playerClass]
+
+    if coords then
+        frame.portrait:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
+        frame.portrait:SetTexCoord(unpack(coords))
+    else
+        -- Fallback seguro
+        SetPortraitTexture(frame.portrait, "player")
+        frame.portrait:SetTexCoord(0, 1, 0, 1)
+    end
+end
 
