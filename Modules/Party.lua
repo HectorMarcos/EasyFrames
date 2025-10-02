@@ -38,23 +38,20 @@ end
 function Party:OnEnable()
     self:SetScale(db.party.scaleFrame)
     self:ShowName(db.party.showName)
-	self:MakeClassPortraits(PartyMemberFrame1)
     self:SetFrameNameFont()
     self:SetFrameNameColor()
     self:SetHealthBarsFont()
     self:SetManaBarsFont()
---    self:ShowPetFrames(db.party.showPetFrames)
+    --self:ShowPetFrames(db.party.showPetFrames)
 
     self:SecureHook("PartyMemberFrame_OnEvent", "PartyFrame_UpdateAuras")
     self:SecureHook("TextStatusBar_UpdateTextString", "UpdateTextStringWithValues")
-	self:SecureHook("UnitFramePortrait_Update", "MakeClassPortraits")
-    --self:SecureHook("TextStatusBar_UpdateTextStringWithValues", "UpdateTextStringWithValues")
-	
-	for i = 1, 4 do
+    self:SecureHook("UnitFramePortrait_Update", "MakeClassPortraits")
+
+    for i = 1, 4 do
         local frame = _G["PartyMemberFrame" .. i]
         self:MakeClassPortraits(frame)
     end
-
 end
 
 function Party:OnProfileChanged(newDB)
@@ -62,16 +59,19 @@ function Party:OnProfileChanged(newDB)
     db = self.db.profile
 
     self:SetScale(db.party.scaleFrame)
-	self:MakeClassPortraits(PartyMemberFrame1)
     self:ShowName(db.party.showName)
     self:SetFrameNameFont()
     self:SetFrameNameColor()
     self:SetHealthBarsFont()
     self:SetManaBarsFont()
---    self:ShowPetFrames(db.party.showPetFrames)
 
     self:UpdateTextStringWithValues()
     self:UpdateTextStringWithValues(PartyMemberFrame1ManaBar)
+
+    for i = 1, 4 do
+        local frame = _G["PartyMemberFrame" .. i]
+        self:MakeClassPortraits(frame)
+    end
 end
 
 function Party:SetScale(value)
@@ -80,39 +80,26 @@ function Party:SetScale(value)
     end)
 end
 
-local UFP = "UnitFramePortrait_Update"
-local UICC = "Interface\\TargetingFrame\\UI-Classes-Circles"
-local CIT = CLASS_ICON_TCOORDS
-
 function Party:MakeClassPortraits(frame)
-    if (frame.unit == "vehicle") then
+    if not frame or not frame.unit or not frame.portrait then return end
+
+    if frame.unit == "vehicle" then
         DefaultPortraits(frame)
         return
     end
 
-    if frame:IsObjectType("Button") and frame:GetName() and string.match(frame:GetName(), "^PartyMemberFrame%d$") then
-    
-        if (db.party.portrait == "2") then
-            if frame.portrait then
-                local _, class = UnitClass(frame.unit)
-                local t = CIT[class]
-                if t then
-                    frame.portrait:SetTexture(UICC)
-                    frame.portrait:SetTexCoord(unpack(t))
-                end
-            end
-        else
-            DefaultPortraits(frame)
-        end
+    if db.party.portrait == "2" and UnitIsPlayer(frame.unit) then
+        ClassPortraits(frame)
+    else
+        DefaultPortraits(frame)
     end
 end
-
 
 function Party:UpdateTextStringWithValues(statusBar)
     local frame = statusBar or PartyMemberFrame1HealthBar
 
-    if (frame.unit == "party1" or frame.unit == "party2" or frame.unit == "party3" or frame.unit == "party4") then
-        if (string.find(frame:GetName(), 'HealthBar')) then
+    if frame.unit and string.match(frame.unit, "^party%d$") then
+        if string.find(frame:GetName(), "HealthBar") then
             UpdateHealthValues(
                 frame,
                 db.party.healthFormat,
@@ -121,7 +108,7 @@ function Party:UpdateTextStringWithValues(statusBar)
                 db.party.useHealthFormatFullValues,
                 db.party.useChineseNumeralsHealthFormat
             )
-        elseif (string.find(frame:GetName(), 'ManaBar')) then
+        elseif string.find(frame:GetName(), "ManaBar") then
             UpdateManaValues(
                 frame,
                 db.party.manaFormat,
@@ -136,7 +123,7 @@ end
 
 function Party:ShowName(value)
     PartyIterator(function(frame)
-        if (value) then
+        if value then
             frame.name:Show()
         else
             frame.name:Hide()
@@ -151,7 +138,6 @@ function Party:SetHealthBarsFont()
 
     PartyIterator(function(frame)
         local healthBar = _G[frame:GetName() .. "HealthBar"]
-
         healthBar.TextString:SetFont(fontFamily, fontSize, fontStyle)
     end)
 end
@@ -163,7 +149,6 @@ function Party:SetManaBarsFont()
 
     PartyIterator(function(frame)
         local manaBar = _G[frame:GetName() .. "ManaBar"]
-
         manaBar.TextString:SetFont(fontFamily, fontSize, fontStyle)
     end)
 end
@@ -187,12 +172,12 @@ function Party:SetFrameNameColor()
 end
 
 function Party:ResetFrameNameColor()
-    EasyFrames.db.profile.party.partyNameColor = {unpack(EasyFrames.Const.DEFAULT_FRAMES_NAME_COLOR)}
+    EasyFrames.db.profile.party.partyNameColor = { unpack(EasyFrames.Const.DEFAULT_FRAMES_NAME_COLOR) }
 end
 
 function Party:ShowPetFrames(value)
     PartyIterator(function(frame)
-        if (value) then
+        if value then
             _G[frame:GetName() .. "PetFrame"]:Show()
         else
             _G[frame:GetName() .. "PetFrame"]:Hide()
@@ -201,14 +186,12 @@ function Party:ShowPetFrames(value)
 end
 
 function Party:PartyFrame_UpdateAuras(frame, event)
-    if (event == "UNIT_AURA") then
+    if event == "UNIT_AURA" then
         local selfName = frame:GetName()
+        local firstDebuffFrame = _G[selfName .. "Debuff1"]
 
-        local firstDebuffFrame = _G[selfName .. 'Debuff1']
-
-        if (firstDebuffFrame) then
+        if firstDebuffFrame then
             local point, relativeTo, relativePoint, xOffset, _ = firstDebuffFrame:GetPoint()
-
             firstDebuffFrame:ClearAllPoints()
             firstDebuffFrame:SetPoint(point, relativeTo, relativePoint, xOffset, -44)
         end
