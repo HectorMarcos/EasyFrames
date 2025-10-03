@@ -168,7 +168,7 @@ local defaults = {
         },
 
         player = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -208,7 +208,7 @@ local defaults = {
         },
 
         target = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -245,7 +245,7 @@ local defaults = {
         },
 
         focus = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -316,7 +316,7 @@ local defaults = {
         },
 
         party = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             -- Custom HP format.
             healthFormat = "2",
             healthBarFontStyle = DEFAULT_BAR_FONT_STYLE,
