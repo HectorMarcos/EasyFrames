@@ -20,7 +20,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("EasyFrames")
 local Media = LibStub("LibSharedMedia-3.0")
 
 local MODULE_NAME = "Player"
-local Player = EasyFrames:NewModule(MODULE_NAME, "AceHook-3.0")
+local Player = EasyFrames:NewModule(MODULE_NAME, "AceHook-3.0", "AceEvent-3.0")
 
 local db
 
@@ -64,10 +64,29 @@ function Player:OnEnable()
     self:ShowRoleIcon(db.player.showRoleIcon)
     self:ShowPVPIcon(db.player.showPVPIcon)
 
+    -- Register power update events to ensure mana bar updates
+    self:RegisterEvent("UNIT_MANA", "OnPowerUpdate")
+    self:RegisterEvent("UNIT_ENERGY", "OnPowerUpdate") 
+    self:RegisterEvent("UNIT_RAGE", "OnPowerUpdate")
+
     --self:SecureHook("TextStatusBar_UpdateTextStringWithValues", "UpdateTextStringWithValues")
     self:SecureHook("TextStatusBar_UpdateTextString", "UpdateTextStringWithValues")
     self:SecureHook("UnitFramePortrait_Update", "MakeClassPortraits")
+    
+    -- Additional hooks for mana bar updates
+    self:SecureHook("UnitFrameManaBar_UpdateType", "OnManaBarUpdate")
+    if PlayerFrame_UpdateManaBar then
+        self:SecureHook("PlayerFrame_UpdateManaBar", "OnManaBarUpdate")
+    end
+    
+    -- Start periodic update timer as backup
+    self:StartPeriodicUpdate()
 	
+end
+
+function Player:OnDisable()
+    -- Clean up the periodic update timer
+    self:StopPeriodicUpdate()
 end
 
 function Player:OnProfileChanged(newDB)
@@ -93,6 +112,61 @@ function Player:OnProfileChanged(newDB)
 
     self:UpdateTextStringWithValues()
     self:UpdateTextStringWithValues(PlayerFrameManaBar)
+end
+
+function Player:OnPowerUpdate(event, unit, powerType)
+    -- Only update if the event is for the player
+    if unit == "player" then
+        -- Force update of mana bar value and text
+        self:UpdateManaBar()
+        self:UpdateTextStringWithValues(PlayerFrameManaBar)
+    end
+end
+
+function Player:UpdateManaBar()
+    if not PlayerFrameManaBar then return end
+    
+    -- Get current mana values directly from the game
+    local power = UnitPower("player")
+    local powerMax = UnitPowerMax("player")
+    
+    -- Update the mana bar's min/max values and current value
+    PlayerFrameManaBar:SetMinMaxValues(0, powerMax)
+    PlayerFrameManaBar:SetValue(power)
+    
+    -- Also update alternate mana bar if it exists and is visible
+    if PlayerFrameAlternateManaBar and PlayerFrameAlternateManaBar:IsVisible() then
+        PlayerFrameAlternateManaBar:SetMinMaxValues(0, powerMax)
+        PlayerFrameAlternateManaBar:SetValue(power)
+    end
+end
+
+function Player:StartPeriodicUpdate()
+    -- Stop any existing timer
+    if self.updateTimer then
+        self.updateTimer:Cancel()
+    end
+    
+    -- Create a periodic timer that updates mana bar every 0.5 seconds as backup
+    self.updateTimer = C_Timer.NewTicker(0.5, function()
+        if PlayerFrameManaBar and PlayerFrameManaBar:IsVisible() then
+            self:UpdateManaBar()
+            self:UpdateTextStringWithValues(PlayerFrameManaBar)
+        end
+    end)
+end
+
+function Player:OnManaBarUpdate()
+    -- Force update of mana bar value and text when mana bar is updated
+    self:UpdateManaBar()
+    self:UpdateTextStringWithValues(PlayerFrameManaBar)
+end
+
+function Player:StopPeriodicUpdate()
+    if self.updateTimer then
+        self.updateTimer:Cancel()
+        self.updateTimer = nil
+    end
 end
 
 
