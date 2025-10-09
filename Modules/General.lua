@@ -35,6 +35,15 @@ local BossIterator = EasyFrames.Helpers.Iterator(EasyFrames.Utils.GetBossFrames(
 local DEFAULT_BUFF_SIZE = 17
 
 local registeredCombatEvent = false
+local previewTicker -- ticker para mantener frames visibles en modo preview
+local PREVIEW_FAKE_VALUES = {
+    player = { hp = 532187, hpmax = 820000, mp = 120000, mpmax = 150000 },
+    target = { hp = 12654321, hpmax = 23500000, mp = 75000, mpmax = 90000 },
+    focus = { hp = 8450000, hpmax = 8450000, mp = 67000, mpmax = 67000 },
+    pet = { hp = 154321, hpmax = 200000, mp = 54000, mpmax = 62000 },
+    party = { hp = 430000, hpmax = 620000, mp = 80000, mpmax = 80000 },
+    boss = { hp = 375000000, hpmax = 500000000, mp = 0, mpmax = 0 },
+}
 
 
 local function ClassColored(statusbar, unit)
@@ -151,6 +160,163 @@ function General:OnEnable()
 
     self:SetMaxBuffCount(db.general.maxBuffCount)
     self:SetMaxDebuffCount(db.general.maxDebuffCount)
+end
+
+-- =====================
+--  PREVIEW (SHOW ALL FRAMES)
+-- =====================
+function General:IsPreviewEnabled()
+    return self.previewActive
+end
+
+local function SetStatusBarValues(bar, cur, max)
+    if not bar or not bar.SetMinMaxValues then return end
+    if max <= 0 then max = 1 end
+    bar:SetMinMaxValues(0, max)
+    bar:SetValue(cur)
+    if bar.TextString and bar.unit then
+        -- reutilizamos lógica existente de formateo llamando al actualizador apropiado
+        local unit = bar.unit
+        -- Determinar tipo (health o mana) de forma heurística
+        if string.find(bar:GetName() or "", "HealthBar") then
+            -- Health
+            local moduleName
+            if unit == "player" then moduleName = "Player" elseif unit == "target" then moduleName = "Target" elseif unit == "focus" then moduleName = "Focus" elseif unit == "pet" then moduleName = "Pet" elseif unit:match("party%d") then moduleName = "Party" end
+            if moduleName and EasyFrames:GetModule(moduleName) and EasyFrames:GetModule(moduleName).UpdateTextStringWithValues then
+                pcall(EasyFrames:GetModule(moduleName).UpdateTextStringWithValues, EasyFrames:GetModule(moduleName))
+            end
+        else
+            -- Mana / power
+            local moduleName
+            if unit == "player" then moduleName = "Player" elseif unit == "target" then moduleName = "Target" elseif unit == "focus" then moduleName = "Focus" elseif unit == "pet" then moduleName = "Pet" elseif unit:match("party%d") then moduleName = "Party" end
+            if moduleName and EasyFrames:GetModule(moduleName) and EasyFrames:GetModule(moduleName).UpdateTextStringWithValues then
+                pcall(EasyFrames:GetModule(moduleName).UpdateTextStringWithValues, EasyFrames:GetModule(moduleName), bar)
+            end
+        end
+    end
+end
+
+local function ApplyPreviewValues()
+    -- Player no necesita forzado (siempre existe)
+    SetStatusBarValues(PlayerFrameHealthBar, PREVIEW_FAKE_VALUES.player.hp, PREVIEW_FAKE_VALUES.player.hpmax)
+    SetStatusBarValues(PlayerFrameManaBar, PREVIEW_FAKE_VALUES.player.mp, PREVIEW_FAKE_VALUES.player.mpmax)
+
+    -- Target
+    TargetFrame:Show()
+    SetStatusBarValues(TargetFrameHealthBar, PREVIEW_FAKE_VALUES.target.hp, PREVIEW_FAKE_VALUES.target.hpmax)
+    SetStatusBarValues(TargetFrameManaBar, PREVIEW_FAKE_VALUES.target.mp, PREVIEW_FAKE_VALUES.target.mpmax)
+    if TargetFrame.name then TargetFrame.name:SetText("Target (Preview)") end
+
+    -- Focus
+    FocusFrame:Show()
+    SetStatusBarValues(FocusFrameHealthBar, PREVIEW_FAKE_VALUES.focus.hp, PREVIEW_FAKE_VALUES.focus.hpmax)
+    SetStatusBarValues(FocusFrameManaBar, PREVIEW_FAKE_VALUES.focus.mp, PREVIEW_FAKE_VALUES.focus.mpmax)
+    if FocusFrame.name then FocusFrame.name:SetText("Focus (Preview)") end
+    do
+        local portrait = FocusFrame.portrait or _G[FocusFrame:GetName().."Portrait"]
+        if portrait then
+            if db.focus.portrait == "2" then
+                -- Si no hay focus real, usar la clase del jugador
+                if UnitExists("focus") and UnitIsPlayer("focus") then
+                    EasyFrames.Utils.ClassPortraits(FocusFrame)
+                else
+                    EasyFrames.Utils.ClassPortraits({unit="player", portrait=portrait})
+                end
+            else
+                -- Retrato normal (focus real si existe, si no el jugador)
+                SetPortraitTexture(portrait, UnitExists("focus") and "focus" or "player")
+                portrait:SetTexCoord(0,1,0,1)
+            end
+        end
+    end
+
+    -- Pet
+    PetFrame:Show()
+    SetStatusBarValues(PetFrameHealthBar, PREVIEW_FAKE_VALUES.pet.hp, PREVIEW_FAKE_VALUES.pet.hpmax)
+    SetStatusBarValues(PetFrameManaBar, PREVIEW_FAKE_VALUES.pet.mp, PREVIEW_FAKE_VALUES.pet.mpmax)
+
+    -- Party (usar retrato del jugador o clase si configurado en player)
+    for i = 1,4 do
+        local f = _G["PartyMemberFrame"..i]
+        if f then
+            f:Show()
+            local h = _G[f:GetName().."HealthBar"]
+            local m = _G[f:GetName().."ManaBar"]
+            SetStatusBarValues(h, PREVIEW_FAKE_VALUES.party.hp, PREVIEW_FAKE_VALUES.party.hpmax)
+            SetStatusBarValues(m, PREVIEW_FAKE_VALUES.party.mp, PREVIEW_FAKE_VALUES.party.mpmax)
+            if f.name then f.name:SetText("Party"..i.." (Preview)") end
+            if f.portrait then
+                if db.player.portrait == "2" then
+                    -- usar icono de clase del jugador
+                    SetPortraitTexture(f.portrait, "player")
+                    EasyFrames.Utils.ClassPortraits({unit="player", portrait=f.portrait})
+                else
+                    -- retrato normal del jugador
+                    SetPortraitTexture(f.portrait, "player")
+                    f.portrait:SetTexCoord(0,1,0,1)
+                end
+            end
+        end
+    end
+
+    -- Boss (asignar retrato específico)
+    local bossPortraitTexture = "Interface\\Icons\\achievement_boss_ragnaros" -- icono reconocible; fallback genérico
+    for i=1,5 do
+        local f = _G["Boss"..i.."TargetFrame"]
+        if f then
+            f:Show()
+            local h = _G["Boss"..i.."TargetFrameHealthBar"]
+            SetStatusBarValues(h, PREVIEW_FAKE_VALUES.boss.hp, PREVIEW_FAKE_VALUES.boss.hpmax)
+            if f.name then f.name:SetText("Boss"..i.." (Preview)") end
+            local portrait = f.portrait or _G[f:GetName().."Portrait"]
+            if portrait and bossPortraitTexture then
+                portrait:SetTexture(bossPortraitTexture)
+                portrait:SetTexCoord(0,1,0,1)
+            end
+        end
+    end
+end
+
+function General:EnablePreview()
+    if self.previewActive then return end
+    self.previewActive = true
+    -- Evitar que hideOutOfCombat opaque frames en preview
+    self.__savedHideSetting = db.general.hideOutOfCombat
+    db.general.hideOutOfCombat = false
+    ApplyPreviewValues()
+    previewTicker = C_Timer.NewTicker(1.5, function()
+        if self.previewActive then
+            ApplyPreviewValues()
+        end
+    end)
+    print("|cff0cbd0cEasy Frames|r: "..(L["Preview enabled"] or "Preview ON"))
+end
+
+function General:DisablePreview()
+    if not self.previewActive then return end
+    self.previewActive = false
+    if previewTicker then previewTicker:Cancel() previewTicker = nil end
+    -- Restaurar ajuste de ocultar fuera de combate
+    if self.__savedHideSetting ~= nil then
+        db.general.hideOutOfCombat = self.__savedHideSetting
+        self.__savedHideSetting = nil
+        self:HideFramesOutOfCombat()
+    end
+    -- Ocultar frames que no tienen unidad
+    if not UnitExists("target") then TargetFrame:Hide() end
+    if not UnitExists("focus") then FocusFrame:Hide() end
+    if not UnitExists("pet") then PetFrame:Hide() end
+    for i=1,4 do if not UnitExists("party"..i) then local f=_G["PartyMemberFrame"..i]; if f then f:Hide() end end end
+    for i=1,5 do if not UnitExists("boss"..i) then local f=_G["Boss"..i.."TargetFrame"]; if f then f:Hide() end end end
+    print("|cff0cbd0cEasy Frames|r: "..(L["Preview disabled"] or "Preview OFF"))
+end
+
+function General:TogglePreview()
+    if self.previewActive then
+        self:DisablePreview()
+    else
+        self:EnablePreview()
+    end
 end
 
 function General:OnProfileChanged(newDB)

@@ -116,6 +116,39 @@ local generalOptions = {
             name = L["In main options you can set the global options like colored frames, buffs settings, etc"],
         },
 
+        previewGroup = {
+            type = "group",
+            order = 1.5,
+            inline = true,
+            name = L["Preview"],
+            args = {
+                header = {
+                    type = "header",
+                    order = 1,
+                    name = L["Preview"],
+                },
+                description = {
+                    type = "description",
+                    order = 2,
+                    name = L["Enable a preview mode that shows all frames with fake values (target, focus, party, bosses)."],
+                },
+                togglePreview = {
+                    type = "toggle",
+                    order = 3,
+                    name = L["Enable preview"],
+                    desc = L["Show/Hide preview of all frames"],
+                    get = function() return EasyFrames:GetModule("General"):IsPreviewEnabled() end,
+                    set = function(_, value)
+                        if value then
+                            EasyFrames:GetModule("General"):EnablePreview()
+                        else
+                            EasyFrames:GetModule("General"):DisablePreview()
+                        end
+                    end,
+                },
+            }
+        },
+
         framesGroup = {
             type = "group",
             order = 2,
@@ -4972,6 +5005,9 @@ function EasyFrames:SetupOptions()
     -- Commands
     self:RegisterChatCommand("easyframes", "ChatCommand")
     self:RegisterChatCommand("ef", "ChatCommand")
+    self:RegisterChatCommand("efpreview", function()
+        EasyFrames:GetModule("General"):TogglePreview()
+    end)
 end
 
 function EasyFrames:RegisterModuleOptions(name, optTable, displayName)

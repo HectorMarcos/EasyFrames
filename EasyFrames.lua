@@ -15,6 +15,10 @@
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
+-- Preview feature note:
+-- Added preview mode toggle: /efpreview or Interface Options -> Easy Frames -> Main options -> Preview.
+-- Shows all major unit frames (target, focus, party, bosses) with fake values until disabled.
+
 local EasyFrames = LibStub("AceAddon-3.0"):NewAddon("EasyFrames", "AceConsole-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("EasyFrames")
 local Media = LibStub("LibSharedMedia-3.0")
@@ -166,7 +170,7 @@ local defaults = {
         },
 
         player = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -206,7 +210,7 @@ local defaults = {
         },
 
         target = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -243,7 +247,7 @@ local defaults = {
         },
 
         focus = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             portrait = "2",
             -- Custom HP format.
             healthFormat = "3",
@@ -314,7 +318,7 @@ local defaults = {
         },
 
         party = {
-            scaleFrame = 1.2,
+            scaleFrame = 1,
             -- Custom HP format.
             healthFormat = "2",
             healthBarFontStyle = DEFAULT_BAR_FONT_STYLE,

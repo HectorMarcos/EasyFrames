@@ -307,3 +307,12 @@ L["Boss names font size"] = true
 L["Boss names color"] = true
 L["Show names of boss frames inside the frame"] = true
 L["Show indicator of threat"] = true
+-- Preview feature
+L["Preview"] = true
+L["Enable preview"] = true
+L["Toggle preview"] = true
+L["Toggle preview mode"] = true
+L["Show/Hide preview of all frames"] = true
+L["Enable a preview mode that shows all frames with fake values (target, focus, party, bosses)."] = true
+L["Preview enabled"] = true
+L["Preview disabled"] = true

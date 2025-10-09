@@ -88,7 +88,7 @@ function Core:OnEnable()
     self:MoveLevelText()
 
     if (db.general.showWelcomeMessage) then
-        print("|cff0cbd0cEasy Frames|cffffffff " .. L["loaded. Options:"] .. " |cff0cbd0c/ef")
+        -- print("|cff0cbd0cEasy Frames|cffffffff " .. L["loaded. Options:"] .. " |cff0cbd0c/ef")
     end
 end
 
