@@ -194,7 +194,7 @@ function Core:MovePlayerFrameBars()
     PlayerStatusTexture:SetHeight(69)
 
     self:MoveRegion(PlayerFrameHealthBar, "CENTER", PlayerFrame, "CENTER", 48, 14)
-    self:MoveRegion(PlayerFrameManaBar, "CENTER", PlayerFrame, "CENTER", 51, -7)
+    self:MoveRegion(PlayerFrameManaBar, "CENTER", PlayerFrame, "CENTER", 48, -7)
     self:MoveRegion(PlayerFrameAlternateManaBarText, "CENTER", PlayerFrameAlternateManaBar, "CENTER", 0, -1)
 
     PlayerFrameGroupIndicator:ClearAllPoints()
