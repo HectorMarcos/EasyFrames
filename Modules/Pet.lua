@@ -48,6 +48,9 @@ function Pet:OnEnable()
     self:PreSetMovable()
     self:SetMovable(db.pet.lockedMovableFrame)
 
+    self:CreateHealthBarBackground()
+    self:CreateManaBarBackground()
+
     self:SetHealthBarsFont()
 
     self:ShowName(db.pet.showName)
@@ -335,4 +338,30 @@ end
 
 function Pet:SetAttackBackgroundOpacity(value)
     PetFrameFlash:SetAlpha(value)
+end
+
+function Pet:CreateHealthBarBackground()
+    if not PetFrameHealthBar.background then
+        -- Crear la textura de fondo
+        PetFrameHealthBar.background = PetFrameHealthBar:CreateTexture(nil, "BACKGROUND")
+        
+        -- Configurar la textura como un color sólido negro
+        PetFrameHealthBar.background:SetColorTexture(0, 0, 0, 0.3)
+        
+        -- Hacer que cubra toda la barra
+        PetFrameHealthBar.background:SetAllPoints(PetFrameHealthBar)
+    end
+end
+
+function Pet:CreateManaBarBackground()
+    if not PetFrameManaBar.background then
+        -- Crear la textura de fondo
+        PetFrameManaBar.background = PetFrameManaBar:CreateTexture(nil, "BACKGROUND")
+        
+        -- Configurar la textura como un color sólido negro
+        PetFrameManaBar.background:SetColorTexture(0, 0, 0, 0.3)
+        
+        -- Hacer que cubra toda la barra
+        PetFrameManaBar.background:SetAllPoints(PetFrameManaBar)
+    end
 end
